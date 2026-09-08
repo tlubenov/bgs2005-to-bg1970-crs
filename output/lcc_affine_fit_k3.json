@@ -1,0 +1,34 @@
+{
+  "zone": "k3",
+  "quadrant": "northwest",
+  "model": "lcc(cone constant n, lon0/lat0 fixed by convention) + similarity2d(theta,s,tx,ty)",
+  "identifiable_parameters": [
+    "n",
+    "theta_rad",
+    "scale",
+    "tx",
+    "ty"
+  ],
+  "note": "lon0 and the standard parallels are NOT recoverable from planar correspondences: lon0 trades off exactly against theta, and the standard parallels against scale. Only the cone constant n is determined. See fit_analytic_lcc.py --identifiability.",
+  "cone_constant_n": 0.6877020420914359,
+  "tangent_parallel_deg": 43.44847973232255,
+  "lon0_convention_deg": 25.5,
+  "lat0_fixed_deg": 42.6678756833333,
+  "theta_rad": 0.027657477523886732,
+  "scale": 0.9999935251854858,
+  "tx": 8685630.925363626,
+  "ty": 4639449.595386594,
+  "ellps": "GRS80",
+  "input": "lon,lat degrees in BGS2005 geographic (EPSG:7798)",
+  "output": "E,N meters in KS1970 zone K3 (unpublished 'Coordinate system 1970')",
+  "proj_pipeline": "+proj=pipeline +step +proj=lcc +lat_0=42.6678756833 +lat_1=43.4484797323 +lat_2=43.4484797323 +lon_0=25.5000000000 +x_0=0 +y_0=0 +ellps=GRS80 +step +proj=affine +xoff=8685630.925364 +yoff=4639449.595387 +s11=0.999611084010 +s12=-0.027653772571 +s21=0.027653772571 +s22=0.999611084010",
+  "fit_step": "1km",
+  "test_step": "2km",
+  "accuracy_m": {
+    "out_of_sample_rmse": 0.10004700319993103,
+    "out_of_sample_p95": 0.1886268370241384,
+    "out_of_sample_max": 0.2984168446537241,
+    "n_fit": 23680,
+    "n_test": 5907
+  }
+}

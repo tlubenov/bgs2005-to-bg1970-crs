@@ -1,0 +1,19 @@
+numpy
+pyproj>=3.6
+
+# Notes on dependencies:
+#
+# * SciPy is NOT required. The Levenberg-Marquardt fit and the triangulation this
+#   project needs are implemented directly in numpy (scripts/optim.py and
+#   scripts/lattice.py) -- the control points form a regular lattice, so a general
+#   Delaunay routine was never the right tool for them anyway. Both modules are
+#   self-testing: run them directly to check them.
+#
+# * GDAL (osgeo.ogr, used to read the shapefiles in scripts/bg_points.py and to
+#   read/write vector files in scripts/reproject_shapefile.py) is deliberately not
+#   listed: pip-installing it requires an exact match with your system libgdal,
+#   which usually fails. Get it from your OS package manager (apt install
+#   python3-gdal) or conda-forge (conda install -c conda-forge gdal) instead --
+#   see README.md, "Installing PROJ".
+#
+# * pyproj must be built against PROJ >= 7.2.0 for the tinshift operator.
