@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+
+# Input data is committed as zip archives (see README, "The data").
+# These are the unpacked working copies.
+/source_data/
+/source_data_buff20km/
+/source_csv/

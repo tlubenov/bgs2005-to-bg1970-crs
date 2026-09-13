@@ -1,4 +1,15 @@
-# Recovering Bulgaria's unpublished "1970 system" zones (K3/K5/K7/K9) from BGS2005
+# bgks1970 — recovering Bulgaria's unpublished "1970 system" zones from BGS2005
+
+[![status](https://img.shields.io/badge/status-stable-brightgreen)](#)
+An installable Python library and CLI that recovers Bulgaria's KS1970 Lambert
+zones (K3/K5/K7/K9) from BGS2005/CCS2005, and rebuilds every artifact in this
+repository with **one command**:
+
+```bash
+pip install -e .
+bgks1970 reconstruct
+```
+
 
 ## The problem
 
@@ -21,8 +32,14 @@ determine.
 
 ## The data
 
-`source_data/` holds, for each zone `n` ∈ {3,5,7,9} and each sampling step
-`r` ∈ {1km, 2km}:
+> **No unpacking needed.** The sampled data ships as zip archives — the raw trees
+> are ~87 MB against ~14 MB zipped — and GDAL reads the shapefiles straight out of
+> them through its `/vsizip/` virtual filesystem. If you do unpack an archive, the
+> unpacked directory is used in preference; either way the code addresses it the
+> same. Extracted directories are gitignored.
+
+`source_data_buff20km/` is the primary dataset. For each zone `n` ∈ {3,5,7,9} and
+each sampling step `r` ∈ {1km, 2km}:
 
 | file | contents |
 |---|---|
@@ -30,75 +47,121 @@ determine.
 | `bg_k{n}_{r}_sel_tr.shp` | the same points run through AGKK's official tool into KS1970 zone K{n}. Its `.prj` gives the datum and projection type only |
 | `bg_k{n}_{r}_sel_tr.log` | AGKK's own report: *"Target zone width: 3 degrees … Plane transform accuracy - 0.14 meters"* |
 
-`bg_ext/bg_zones1970.shp` holds the four official zone extents (one polygon per
-zone, field `CLIST` = 3/5/7/9) in WGS 84 / UTM zone 35N. It is what the paper's
-map is drawn from.
-
 Each `_sel` / `_sel_tr` pair shares an integer `id`, so every point is an exact
-correspondence — no manually surveyed control points are involved.
+correspondence — no manually surveyed control points are involved. The `id` is a
+per-file row key only; the join is always made within one pair, so the fact that a
+zone's 1 km and 2 km files reuse some id values is harmless.
 
-| zone | quadrant | 1 km points | 2 km points | zone area (`bg_ext`) |
+Sampling covers each zone's extent **buffered 20 km outward**. That matters in
+practice: a grid sampled exactly to the zone boundary stops working precisely where
+it is most often needed — along the boundaries between zones, and for features that
+cross them. Measured on K9's own official boundary vertices, the un-buffered grid
+covered **9 of 126** of them (7%); the buffered grid covers **all 126**.
+
+| zone | quadrant | 1 km points | 2 km points | zone area | 
 |---|---|---|---|---|
-| K3 | northwest | 23 680 | 5 907 | 23 695 km² |
-| K5 | southeast | 31 912 | 7 987 | 31 891 km² |
-| K7 | northeast | 30 401 | 7 599 | 30 378 km² |
-| K9 | southwest | 37 294 | 9 319 | 37 333 km² |
+| K3 | northwest | 47 804 | 11 939 | 23 695 km² |
+| K5 | southeast | 56 594 | 14 159 | 31 891 km² |
+| K7 | northeast | 53 912 | 13 478 | 30 378 km² |
+| K9 | southwest | 62 497 | 15 620 | 37 333 km² |
 
-The four zone polygons **tile** the country rather than overlapping: their areas
-sum to 123 297 km² against a union of 123 281 km². The point counts track the
-areas almost exactly, as a 1 km lattice should.
+Supporting data:
+
+- `source_data/` — the earlier, un-buffered sampling. Kept because it is a
+  complete, independent set of positions, which makes it a usable fall-back
+  validation set.
+- `source_csv/points_{1,2}km_bgs7801.*` — the master national lattice in EPSG:7801
+  (225 216 points at 1 km, 56 448 at 2 km) that the per-zone `_sel` selections were
+  cut from.
+- `bg_ext/bg_zones1970.shp` — the four official zone extents (field `CLIST` =
+  3/5/7/9) in WGS 84 / UTM zone 35N.
+- `bg_ext/bg_zones1970_buff20km.geojson` — the same, buffered by 20 km, already in
+  EPSG:7801. This is the region the primary dataset samples; its union runs
+  E 206 222…780 705, N 4 539 859…4 928 413.
+
+The four official zone polygons **tile** the country rather than overlapping: their
+areas sum to 123 297 km² against a union of 123 281 km².
+
+### A note on K5 — resolved
+
+K5's first 1 km export was interrupted. BGSTrans writes the transformed shapefile
+last, so it left a `.dbf` and `.shx` behind with no `.shp`, a `.prj` that was never
+written, and a 32-byte `.log` against 510 for every other zone — a state that looks
+complete to a casual `ls`.
+
+The orphaned `.dbf` was still readable and showed the run had covered 56 633 of
+56 636 records, with the three missing ids being the *last three in file order* — a
+clean truncation at the end of the run rather than three points the transform
+rejected. (A tempting theory, that AGKK's domain stops at 41°N, was disproved by the
+data: points further south in the same row transformed fine.) The export has since
+been re-run and all four zones now come from complete data.
+
+`bgks1970 check` exists to make that failure mode impossible to miss — and
+`bgks1970 reconstruct` runs it first, refusing to fit truncated data.
 
 ### Why the two sampling steps matter
 
-The 1 km and 2 km sets are **disjoint** — they share no ids, and their lattices
-are offset from each other by 120 m, so no 2 km point coincides with any 1 km
+The 1 km and 2 km lattices of a zone are offset by exactly **500 m**, so a 2 km
+point sits at the *centre* of a 1 km cell and no 2 km point coincides with any 1 km
 point (verified: zero coordinate collisions in all four zones).
 
-So every model here is built on the 1 km set and scored on the 2 km set, which
-is a genuinely independent sample rather than a random split of one lattice.
-For the interpolating model that distinction matters a great deal: a random
-hold-out of a single lattice leaves test points sitting on the *edges* of
-triangles built from their own immediate neighbours, which flatters the result.
-The 2 km points instead land in the **interior** of the 1 km cells — the worst
-case for piecewise-linear interpolation. Every number below is therefore
-conservative.
+So every model is built on the 1 km set and scored on the 2 km set, which is a
+genuinely independent sample rather than a random split of one lattice. For the
+interpolating model that distinction matters a great deal: a random hold-out of a
+single lattice leaves test points sitting on the *edges* of triangles built from
+their own immediate neighbours, which flatters the result. Cell centres are the
+worst possible position for piecewise-linear interpolation, so every number below is
+an upper bound rather than a favourable sample.
 
 ## Two solutions per zone
 
-| | `fit_analytic_lcc.py` | `build_tin_grid.py` |
+| | `bgks1970 fit` | `bgks1970 grid` |
 |---|---|---|
 | Output | closed-form PROJ pipeline (LCC + 2D similarity) | `tinshift` triangulated grid (JSON) |
 | Coverage | anywhere (extrapolates) | only within the zone's sampled territory |
 | Portability | one short PROJ string, embeddable anywhere | one 2–4 MB JSON file PROJ must load |
-| Accuracy | 0.09–0.14 m RMSE | 0.06–0.24 **mm** RMSE |
+| Accuracy | 0.14–0.21 m RMSE | 0.14–0.61 **mm** median |
 | Use when | you need a compact formula, or points outside the sampled area | you want survey-grade accuracy (recommended) |
 
-### Closed-form model — out-of-sample accuracy (2 km set)
+### Closed-form model — out-of-sample accuracy
 
 | zone | cone constant *n* | tangent parallel | rotation | scale | RMSE | p95 | max |
 |---|---|---|---|---|---|---|---|
-| K3 | 0.687702042 | 43.448480° | +5704.8″ | −6.47 ppm | 0.100 m | 0.189 m | 0.298 m |
-| K5 | 0.675158040 | 42.466424° | −2161.3″ | −3.08 ppm | 0.143 m | 0.267 m | 0.466 m |
-| K7 | 0.689025227 | 43.552997° | −1812.4″ | +1.34 ppm | 0.120 m | 0.237 m | 0.330 m |
-| K9 | 0.672864894 | 42.288566° | +5041.6″ | −8.63 ppm | 0.085 m | 0.169 m | 0.270 m |
+| K3 | 0.687723149 | 43.450145° | +5704.9″ | −6.55 ppm | 0.172 m | 0.329 m | 0.445 m |
+| K5 | 0.675170794 | 42.467415° | −2161.3″ | −3.05 ppm | 0.213 m | 0.401 m | 0.641 m |
+| K7 | 0.689029005 | 43.553295° | −1812.4″ | +1.41 ppm | 0.190 m | 0.352 m | 0.494 m |
+| K9 | 0.672869214 | 42.288900° | +5041.6″ | −8.81 ppm | 0.139 m | 0.282 m | 0.497 m |
 
-This **matches AGKK's own declared 0.14 m plane accuracy** for its tool. The
-fit-set and out-of-sample RMSE agree to three decimals in every zone, so this
-residual is model bias, not overfitting — a single global conic simply cannot
-express the local structure of the historical 1970 network adjustment.
+These are of the order of AGKK's own declared 0.14 m plane accuracy, ranging from
+0.14 to 0.21 m by zone. Fit-set and out-of-sample RMSE agree to three decimals in
+every zone, so this residual is model bias, not overfitting.
 
-### Grid model — out-of-sample accuracy (2 km set)
+Against the earlier un-buffered sampling the same **cone constants reproduce to five
+decimals** (K3 0.687723 vs 0.687702, K9 0.672869 vs 0.672865) while the RMSE rises —
+as expected, since one global conic now has to cover 20 km more territory in every
+direction. That cross-dataset agreement is the strongest evidence that *n* is a real
+recovered property rather than a fitting artefact.
+
+### Grid model — out-of-sample accuracy
 
 | zone | vertices | triangles | size | covered | median | p95 | max | residuals > 1 mm |
 |---|---|---|---|---|---|---|---|---|
-| K3 | 23 680 | 46 491 | 2.21 MB | 5 817/5 907 | 0.211 mm | 0.213 mm | 121.1 mm | 28 |
-| K5 | 31 912 | 62 938 | 3.01 MB | 7 868/7 987 | 0.055 mm | 0.055 mm | 0.055 mm | 0 |
-| K7 | 30 401 | 59 976 | 2.86 MB | 7 530/7 599 | 0.240 mm | 0.242 mm | 0.242 mm | 0 |
-| K9 | 37 294 | 73 671 | 3.53 MB | 9 219/9 319 | 0.104 mm | 0.105 mm | 111.3 mm | 40 |
+| K3 | 47 804 | 94 569 | 4.54 MB | 11 810/11 939 | 0.535 mm | 0.544 mm | 79.3 mm | 36 |
+| K5 | 56 594 | 112 120 | 5.39 MB | 14 025/14 159 | 0.137 mm | 0.139 mm | 0.139 mm | 0 |
+| K7 | 53 912 | 106 798 | 5.13 MB | 13 343/13 478 | 0.607 mm | 0.615 mm | 0.616 mm | 0 |
+| K9 | 62 497 | 123 915 | 5.96 MB | 15 497/15 620 | 0.262 mm | 0.266 mm | 182.3 mm | 61 |
 
-Uncovered points are 2 km points falling just outside the 1 km lattice's outline
-(the two sets do not span exactly the same rectangle); they are excluded rather
-than extrapolated. Round-trip error, forward then inverse, is under 3 nm.
+Uncovered points fall just outside the built lattice's outline; they are excluded
+rather than extrapolated. Round-trip error, forward then inverse, is under 3 nm (one
+K9 point on the domain edge does not invert and is reported separately rather than
+being allowed to poison the statistic).
+
+Medians are higher than the previous un-buffered run (0.055–0.240 mm) for a good
+reason: the 2 km points now sit at exact cell centres instead of 120 m off-node, so
+this is the true worst case rather than a lucky sample.
+
+Before trusting a fresh export, run `bgks1970 check` — it exits non-zero on an
+incomplete one.
 
 ## Two findings worth stating plainly
 
@@ -114,15 +177,15 @@ parameters are not identifiable from planar correspondences:
 - changing (φ₁, φ₂) at constant cone constant *n* changes only the projection's
   overall scale factor, which the similarity's scale *s* absorbs exactly.
 
-Measured, on K3 (`fit_analytic_lcc.py --identifiability`):
+Measured, on K3 (`bgks1970 fit --identifiability --zone k3`):
 
 | start λ₀ | fitted λ₀ | φ₁ | φ₂ | scale−1 | cone *n* | RMSE |
 |---|---|---|---|---|---|---|
-| 23.0° | 23.119184° | 43.509° | 43.388° | −5.9 ppm | 0.687702042 | 0.1000 m |
-| 25.5° | 24.354318° | 39.381° | 47.425° | +2455.2 ppm | 0.687702042 | 0.1000 m |
-| 27.5° | 25.345188° | 53.044° | 33.302° | +15010.6 ppm | 0.687702042 | 0.1000 m |
+| 23.0° | 23.119220° | 43.347° | 43.554° | −4.9 ppm | 0.687723149 | 0.1720 m |
+| 25.5° | 24.353738° | 50.062° | 36.583° | +6936.3 ppm | 0.687723149 | 0.1720 m |
+| 27.5° | 25.341094° | 47.275° | 39.541° | +2268.2 ppm | 0.687723149 | 0.1720 m |
 
-Parameters differing by **degrees** and by 15 000 ppm of scale produce
+Parameters differing by **degrees** and by nearly 7000 ppm of scale produce
 coordinates agreeing to **under one micrometre**, and agree on *n* to nine
 significant figures. So this repository fits the identifiable 5-parameter form
 directly — *n*, θ, *s*, tₓ, t_y, with λ₀ pinned to 25.5° as a stated convention —
@@ -132,57 +195,70 @@ and nothing claimed that the data does not determine.
 ### 2. AGKK's own transformation is discontinuous along 24°E
 
 Along any straight row of the lattice, a smooth projection produces a second
-difference of a couple of millimetres at 1 km spacing. In K3 and K9 there is a
-localized spike two samples wide, sitting exactly on the 24°E meridian:
+difference of a couple of millimetres per km² — that is just the conic's own
+curvature. In K3 and K9 there is a localized spike two orders of magnitude higher,
+sitting exactly on the 24°E meridian:
 
-| zone | seam longitude | source easting | kink | typical curvature |
+| zone | seam longitude | peak | typical curvature | residuals > 1 mm |
 |---|---|---|---|---|
-| K3 | 24.0025° | 378 880 m | 88 mm | 2.2 mm |
-| K9 | 23.9971° | 375 880 m | 127 mm | 1.0 mm |
+| K3 | 24.0000° | 130 mm/km² | 2.2 mm/km² | 36 |
+| K9 | 24.0000° | 150 mm/km² | 1.0 mm/km² | 61 |
+
+**How this is aggregated is critical.** The kink sits on a *meridian*, and a meridian
+is not a column of this projection's grid: over a zone's ~250 km of latitude the
+easting of the 24°E meridian drifts by about 4 km. Bin the curvature by easting
+column and the kink is smeared across eight columns, present in under half the rows
+of each — and a median over rows hides it completely. Bin by longitude and every
+row's kink lands in the same bin, pinning the seam to 24.0000°.
 
 This is a property of AGKK's transformation, not of either dataset or of the
-triangulation here — building the grid from the 2 km set and scoring the 1 km
-set reproduces it at the same eastings. It is almost certainly a panel boundary
-in the tool's own internal correction grid. K5 and K7 show nothing comparable.
+triangulation here — building the grid from one set and scoring the other reproduces
+it at the same longitude, and the earlier independent sampling shows it in the same
+place. It is almost certainly a panel boundary in the tool's own internal correction
+grid. K5 and K7 show nothing comparable.
 
-The consequence: **all 68 out-of-sample residuals above 1 mm in the entire
-project lie on this line.** The grid reproduces the kink exactly at sampled
-points but must interpolate straight across it in the one cell that straddles
-it. Excluding those points, every zone's out-of-sample RMSE is its median:
-0.211, 0.055, 0.240 and 0.104 mm. No closed-form model can represent the kink at
-all. `build_tin_grid.py` detects and reports this automatically.
+The consequence: **all 97 out-of-sample residuals above 1 mm in the entire project
+lie on this line.** The grid reproduces the kink exactly at sampled points but must
+interpolate straight across it in the one cell that straddles it. Excluding those
+points, every zone's out-of-sample RMSE is its median: 0.535, 0.137, 0.607 and
+0.262 mm. No closed-form model can represent the kink at all. `bgks1970 grid`
+detects and reports this automatically.
 
-## Directory layout
+## Layout
 
 ```
-source_data/     the 16 input shapefiles (bg_k{3,5,7,9}_{1km,2km}_sel[_tr]) + AGKK logs
-bg_ext/          bg_zones1970.shp -- the four official zone extents (UTM 35N)
-scripts/
-  bg_points.py            shared loader: matched points by id, per zone and step;
-                           also reads the bg_ext zone polygons
-  lcc_math.py             ellipsoidal LCC (Snyder 1987), both the 2SP and the
-                           cone-constant form, + 2D similarity. Self-testing.
-  optim.py                Levenberg-Marquardt least squares in numpy. Self-testing.
-  lattice.py              triangulation of a regular ragged-edged lattice. Self-testing.
-  fit_analytic_lcc.py     fits the identifiable closed-form model per zone
-  build_tin_grid.py       builds the tinshift grid per zone, detects AGKK seams
-  transform_points.py     CLI: transform points forward/reverse, either model
-  reproject_shapefile.py  CLI: reproject a whole vector file, ready for QGIS
-  build_qgis_crs_wkt.py   generates a paste-into-QGIS Custom CRS per zone
-  make_zone_figure.py     renders paper/figures/*.svg from bg_ext, injects them
-                           into the paper, and reports the seam measurements
-  make_paper_pdf.py       renders the paper to PDF, one file per language
+bgks1970/                  the library
+  paths.py            locating the project's data, output and paper directories
+  datasets.py         reading layers out of a zip (/vsizip/) or an unpacked dir
+  data.py             zones, the fit/test split, matched points, zone extents
+  lcc.py              ellipsoidal LCC (Snyder 1987): 2SP and cone-constant forms
+  optim.py            Levenberg-Marquardt least squares, in numpy
+  lattice.py          triangulation of a regular ragged-edged lattice
+  check.py            audits the input archives
+  fit.py              fits the identifiable closed-form model per zone
+  grid.py             builds the tinshift grids, detects AGKK seams
+  crs.py              QGIS-importable Custom CRS per zone
+  transform.py        point transforms, forward and reverse, either model
+  reproject.py        reprojects a whole vector file
+  figures.py          the paper's figures, generated and injected
+  paper.py            renders the paper to PDF, one file per language
+  pipeline.py         `reconstruct()` -- every stage, in dependency order
+  cli.py              the `bgks1970` command
+tests/                unit + integration tests (pytest, or `python tests/run.py`)
+source_data_buff20km.zip   PRIMARY input data -- read in place, no unpacking
+source_data.zip            the earlier un-buffered sampling
+source_csv.zip             the master national 1 km / 2 km lattice
+bg_ext/                    zone extents: official, and buffered by 20 km
 output/
   lcc_affine_fit_k{n}.json      fitted parameters + accuracy report, per zone
-  bg_k{n}_tinshift.json         the PROJ tinshift grid (both directions), per zone
+  bg_k{n}_tinshift.json         the PROJ tinshift grid (both directions)
   bg_k{n}_ks1970_fitted.wkt     QGIS Custom CRS wrapping the analytic pipeline
   tinshift_accuracy.json        grid accuracy + seam diagnostics, all zones
 paper/
   recovering_ks1970.html        the write-up (Bulgarian + English)
-  recovering_ks1970_bg.pdf      Bulgarian edition, A4
-  recovering_ks1970_en.pdf      English edition, A4
-  figures/zones.svg             zone map, generated from bg_ext
-  figures/seam.svg              curvature profile showing the 24°E discontinuity
+  recovering_ks1970_{bg,en}.pdf A4 editions
+  figures/{zones,seam}.svg      generated from bg_ext and the data
+pyproject.toml
 ```
 
 ## 1. Installing PROJ and its Python bindings
@@ -195,20 +271,20 @@ proj    # first line prints the release, e.g. "Rel. 9.7.1"
 
 Dependencies are deliberately minimal: **numpy and pyproj**. There is no SciPy
 dependency — the Levenberg-Marquardt fit and the triangulation are implemented
-directly in `scripts/optim.py` and `scripts/lattice.py`, both of which are
-self-testing (run them directly). GDAL is needed only to read the shapefiles.
+directly in `bgks1970/optim.py` and `bgks1970/lattice.py`, both covered by the
+test suite. GDAL is needed only to read the shapefiles.
 
 ### Option A — system packages (Debian/Ubuntu, what this repo was built against)
 
 ```bash
-sudo apt-get install proj-bin libproj-dev gdal-bin libgdal-dev python3-gdal python3-numpy
-pip install pyproj
+sudo apt-get install proj-bin libproj-dev gdal-bin libgdal-dev python3-gdal
+pip install -e .
 ```
 
 `proj-bin` gives you the `proj`/`cs2cs`/`cct` CLI tools; `libproj-dev` is needed
 if anything compiles against PROJ; `gdal-bin`/`libgdal-dev`/`python3-gdal` are
-needed only because `bg_points.py` and `reproject_shapefile.py` use GDAL's OGR
-Python bindings. If you only ever use the already-built `output/*.json` files,
+needed only because the library reads shapefiles through GDAL's OGR Python
+bindings. If you only ever use the already-built `output/*.json` files,
 you can skip GDAL entirely.
 
 ### Option B — conda/mamba (easiest way to get matching GDAL+PROJ+pyproj)
@@ -216,6 +292,7 @@ you can skip GDAL entirely.
 ```bash
 conda create -n bgcrs -c conda-forge python=3.12 gdal proj pyproj numpy
 conda activate bgcrs
+pip install -e .
 ```
 
 This sidesteps the most common PROJ headache: GDAL's Python bindings and
@@ -227,7 +304,7 @@ conda-forge keeps them in lockstep.
 
 ```bash
 brew install proj gdal
-pip install pyproj numpy
+pip install -e .
 ```
 
 ### Option D — build PROJ from source (only if your OS ships something too old)
@@ -241,64 +318,106 @@ cmake --build . -j$(nproc)
 sudo cmake --install .
 ```
 
-## 2. Reproducing everything
+## 2. Installing and reproducing everything
 
 ```bash
-# the numeric building blocks check themselves
-python3 scripts/lcc_math.py
-python3 scripts/optim.py
-python3 scripts/lattice.py
-
-# inspect the inputs
-python3 scripts/bg_points.py
-
-# fit / build (all four zones; add --zone k5 for one)
-python3 scripts/fit_analytic_lcc.py      # -> output/lcc_affine_fit_k{n}.json
-python3 scripts/build_tin_grid.py        # -> output/bg_k{n}_tinshift.json
-
-# the identifiability argument from section 1 above, reproduced from the data
-python3 scripts/fit_analytic_lcc.py --identifiability --zone k3
-
-# QGIS-ready outputs (run the fit first, they read its JSON)
-python3 scripts/build_qgis_crs_wkt.py    # -> output/bg_k{n}_ks1970_fitted.wkt
-
-# the paper's figures, from bg_ext; also re-injects them into the paper
-python3 scripts/make_zone_figure.py      # -> paper/figures/{zones,seam}.svg
-
-# the paper as PDF, one file per language
-python3 scripts/make_paper_pdf.py        # -> paper/recovering_ks1970_{bg,en}.pdf
-python3 scripts/make_paper_pdf.py --lang en    # just one
+pip install -e .          # or: pip install -e ".[dev]" for the test suite
 ```
 
-The PDF build needs a Chrome/Chromium binary (pass `--browser` if it is not on
-your `PATH`). It is the same rendering you get from Ctrl+P in a browser: page
-setup, printing on white, keeping the figure fills and not splitting a figure or
-table across a page all live in the paper's own `@media print` block. The figures
-stay vector, so text in them remains selectable and searchable in the PDF. The
-page picks its language from `?lang=bg` / `?lang=en` in the URL, which is how the
-two editions are produced — and is also a convenient way to link someone straight
-to one language.
+GDAL is deliberately not a dependency — pip-installing it demands an exact match
+with your system libgdal, which usually fails. Get it from your OS package manager
+(`apt install python3-gdal`) or conda-forge, as above.
 
-`fit_analytic_lcc.py` and `build_tin_grid.py` both print a full out-of-sample
-accuracy report, so every number in this README regenerates from scratch.
+### One command
+
+```bash
+bgks1970 reconstruct
+```
+
+That audits the input archives, fits the closed-form model, builds the grids,
+writes the QGIS CRS definitions, regenerates the paper's figures and renders its
+PDF editions — about a minute in total, reading straight from the zips. It stops
+at the audit if an export is incomplete, because every number downstream would
+otherwise be quietly built on truncated data.
+
+```
+======================================================================
+== reconstruction summary
+======================================================================
+  ok    audit        6.9s  all layers complete and consistent
+  ok    fit          7.5s  4 zones fitted
+  ok    grid         9.5s  4 grids built
+  ok    crs          1.8s  WKT written
+  ok    figures     33.8s  figures written and injected
+  ok    paper        1.5s  2 PDF(s)
+        total       60.9s
+```
+
+Useful variants:
+
+```bash
+bgks1970 reconstruct --zone k5              # one zone
+bgks1970 reconstruct --stages fit,grid      # a subset of stages
+bgks1970 reconstruct --keep-going           # don't stop at a failing stage
+                                            # (e.g. no browser for the PDF stage)
+```
+
+### Individual stages
+
+```bash
+bgks1970 check                    # audit the input archives; non-zero if unhappy
+bgks1970 fit                      # -> output/lcc_affine_fit_k{n}.json
+bgks1970 fit --identifiability --zone k3    # reproduce finding 1 from the data
+bgks1970 grid                     # -> output/bg_k{n}_tinshift.json
+bgks1970 crs                      # -> output/bg_k{n}_ks1970_fitted.wkt
+bgks1970 figures                  # -> paper/figures/*.svg, injected into the paper
+bgks1970 paper --lang en          # -> paper/recovering_ks1970_en.pdf
+```
+
+### Tests
+
+```bash
+python -m pytest            # with pytest installed
+python tests/run.py         # same tests, no dependencies
+```
+
+### Pointing it at other data
+
+The project directory is found from the current directory, then from the installed
+repository. Override it, or the output and paper locations, with `BGKS1970_ROOT`,
+`BGKS1970_OUTPUT` and `BGKS1970_PAPER`.
 
 ## 3. Using the results
 
-### Via the provided CLI (easiest)
+### As a library
+
+```python
+import bgks1970 as bg
+
+E, N = bg.transform([300000], [4800000], "k3")          # CCS2005 -> KS1970 K3
+x, y = bg.transform(E, N, "k3", direction="reverse")    # and back
+
+bg.reconstruct()                                        # rebuild every artifact
+```
+
+`transform()` uses the grid by default and retries any point outside its coverage
+with the analytic model; pass `method="analytic"` to force the formula, or
+`fallback=False` to get `inf` instead of a fallback.
+
+### Via the CLI
 
 ```bash
-# CCS2005 -> KS1970 K3, single point, uses the grid (falls back to the analytic
-# model automatically for any point outside the grid's coverage)
-python3 scripts/transform_points.py --zone k3 --xy 300000 4800000
+# CCS2005 -> KS1970 K3, single point
+bgks1970 transform --zone k3 --xy 300000 4800000
 
 # KS1970 K5 -> CCS2005 (reverse)
-python3 scripts/transform_points.py --zone k5 --direction reverse --xy 9500000 4600000
+bgks1970 transform --zone k5 --direction reverse --xy 9500000 4600000
 
 # batch, CSV with columns x,y (any extra columns are preserved)
-python3 scripts/transform_points.py --zone k9 --csv in.csv --out out.csv
+bgks1970 transform --zone k9 --csv in.csv --out out.csv
 
 # force the closed-form model (e.g. for a point far outside that zone)
-python3 scripts/transform_points.py --zone k7 --method analytic --xy 500000 4800000
+bgks1970 transform --zone k7 --method analytic --xy 500000 4800000
 ```
 
 ### Via pyproj directly
@@ -314,11 +433,11 @@ E, N = tr.transform(300000, 4800000)            # forward: CCS2005 -> KS1970 K3
 x, y = tr.transform(E, N, direction="INVERSE")  # reverse: KS1970 K3 -> CCS2005
 ```
 
-The analytic pipeline string is printed by `fit_analytic_lcc.py` and saved as
-`proj_pipeline` in `output/lcc_affine_fit_k{n}.json`; it maps **geodetic lon/lat
-in BGS2005 (EPSG:7798)** to KS1970 E/N. `transform_points.py` prepends the fully
-known inverse of EPSG:7801 so it can be driven directly from CCS2005 E/N — see
-`build_analytic_pipeline()` there for the composed string.
+The analytic pipeline string is printed by `bgks1970 fit` and saved as
+`proj_pipeline` in `output/lcc_affine_fit_k{n}.json`; it maps **geodetic lon/lat in
+BGS2005 (EPSG:7798)** to KS1970 E/N. `bgks1970.transform.build_analytic_pipeline()`
+prepends the fully known inverse of EPSG:7801 so it can be driven directly from
+CCS2005 E/N.
 
 ### Via the `cct` command-line tool
 
@@ -341,9 +460,12 @@ custom CRS or coordinate-operation setup needed in QGIS at all, since the output
 coordinates are already correct:
 
 ```bash
-python3 scripts/reproject_shapefile.py --zone k3 --direction forward \
-    --in source_data/bg_k3_1km_sel.shp --out bg_k3_as_ks1970.gpkg
+bgks1970 reproject --zone k3 --direction forward \
+    --in my_layer.shp --out my_layer_ks1970.gpkg
 ```
+
+It reads zipped input too, e.g.
+`--in /vsizip/source_data_buff20km.zip/source_data_buff20km/bg_k3_1km_sel.shp`.
 
 Works for points/lines/polygons, `.shp`/`.gpkg`/`.geojson` in or out. The output
 carries no CRS metadata (the true destination CRS has no official definition to
@@ -354,8 +476,8 @@ sub-millimetre accuracy.
 Note: **`ogr2ogr -ct "<pipeline>"` does not work reliably for this.** It
 internally disables the whole coordinate-transform object after the first few
 points near the grid's domain edge fail, which then silently drops every feature
-in the file. `gdaltransform` and `reproject_shapefile.py` (which drives pyproj
-directly) do not have this problem.
+in the file. `gdaltransform` and `bgks1970 reproject` (which drives pyproj directly) do not
+have this problem.
 
 ### Convenient for general GIS use: import a Custom CRS
 
@@ -393,7 +515,7 @@ echo "300000 4800000" | gdaltransform -ct "+proj=pipeline +step +proj=tinshift +
   the part that is actually determined by the data. Do not quote the tangent
   parallel or λ₀ as though they were AGKK's.
 - The grid only interpolates inside the sampled territory of its zone. Outside
-  it PROJ returns `inf`/`inf`; `transform_points.py` falls back to the analytic
+  it PROJ returns `inf`/`inf`; `bgks1970 transform` falls back to the analytic
   model. Because the zones tile rather than overlap, a point just outside one
   zone's coverage will usually not be covered by a neighbour's file either.
 - The PROJ triangulation-file schema has an optional `fallback_strategy` field
@@ -411,3 +533,6 @@ echo "300000 4800000" | gdaltransform -ct "+proj=pipeline +step +proj=tinshift +
 - The 24°E discontinuity (finding 2) is inherited from AGKK's tool. Survey work
   crossing that meridian in K3 or K9 should expect ~0.1 m of disagreement there
   regardless of which method is used.
+- The pipeline reads `source_data_buff20km.zip` by default; set `BGKS1970_ROOT` to
+  point it at another project directory. Unpacked directories take precedence over
+  archives when both are present.
