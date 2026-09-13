@@ -2,134 +2,160 @@
   {
     "zone": "k3",
     "quadrant": "northwest",
-    "n_vertices": 23680,
-    "n_triangles": 46491,
-    "build_step": "1km",
-    "test_step": "2km",
+    "n_vertices": 47804,
+    "n_triangles": 94569,
+    "build_source": "source_data_buff20km.zip/1km",
+    "test_sources": [
+      "source_data_buff20km.zip/2km"
+    ],
+    "provisional": false,
+    "provisional_reason": null,
     "out_of_sample": {
-      "n_total": 5907,
-      "n_covered": 5817,
-      "coverage_fraction": 0.9847638395124428,
-      "median_mm": 0.2107688187787432,
-      "p95_mm": 0.21314284534200906,
-      "rmse_mm": 2.826690002698151,
-      "max_mm": 121.14019747813117,
-      "n_over_1mm": 28,
+      "n_total": 11939,
+      "n_covered": 11810,
+      "coverage_fraction": 0.9891950749644024,
+      "median_mm": 0.5354283431115667,
+      "p95_mm": 0.544169477676861,
+      "rmse_mm": 3.181475505317458,
+      "max_mm": 79.34303972640495,
+      "n_over_1mm": 36,
       "outlier_eastings": [
-        378000.0
+        376500.0,
+        378500.0
       ],
-      "median_excluding_outliers_mm": 0.21076487990292808,
-      "rmse_excluding_outliers_mm": 0.2106585556741332
+      "median_excluding_outliers_mm": 0.5354057583423473,
+      "rmse_excluding_outliers_mm": 0.5353634640245493
     },
     "agkk_seam": {
-      "row_northing": 4818750.0,
-      "typical_curvature_mm": 2.2204472304724985,
-      "worst_curvature_mm": 88.1993421038653,
-      "worst_at_easting": 378880.0,
-      "worst_at_longitude_deg": 24.002518939449388,
+      "row_northing": 4819000.0,
+      "lattice_step_m": 1000.0,
+      "typical_curvature_mm": 2.2203837776871214,
+      "worst_curvature_mm": 87.9435402806343,
+      "worst_at_easting": 379000.0,
+      "worst_at_longitude_deg": 24.00394757031687,
       "is_discontinuity": true
     },
-    "roundtrip_max_mm": 2.227916755830478e-06,
+    "roundtrip_max_mm": 2.109174492302518e-06,
+    "roundtrip_edge_failures": 0,
     "grid_path": "/mlsys/dev/bgs2005-to-bg1970-crs/output/bg_k3_tinshift.json",
-    "grid_size_mb": 2.21
+    "grid_size_mb": 4.54
   },
   {
     "zone": "k5",
     "quadrant": "southeast",
-    "n_vertices": 31912,
-    "n_triangles": 62938,
-    "build_step": "1km",
-    "test_step": "2km",
+    "n_vertices": 56594,
+    "n_triangles": 112120,
+    "build_source": "source_data_buff20km.zip/1km",
+    "test_sources": [
+      "source_data_buff20km.zip/2km"
+    ],
+    "provisional": false,
+    "provisional_reason": null,
     "out_of_sample": {
-      "n_total": 7987,
-      "n_covered": 7868,
-      "coverage_fraction": 0.9851007887817704,
-      "median_mm": 0.05473493307202591,
-      "p95_mm": 0.05520465926239162,
-      "rmse_mm": 0.054701483230385005,
-      "max_mm": 0.055319079952653914,
+      "n_total": 14159,
+      "n_covered": 14025,
+      "coverage_fraction": 0.9905360548061304,
+      "median_mm": 0.13681319767543168,
+      "p95_mm": 0.13851271699478349,
+      "rmse_mm": 0.1367721546803242,
+      "max_mm": 0.138882802102911,
       "n_over_1mm": 0,
       "outlier_eastings": [],
-      "median_excluding_outliers_mm": 0.05473493307202591,
-      "rmse_excluding_outliers_mm": 0.054701483230385005
+      "median_excluding_outliers_mm": 0.13681319767543168,
+      "rmse_excluding_outliers_mm": 0.1367721546803242
     },
     "agkk_seam": {
-      "row_northing": 4659750.0,
-      "typical_curvature_mm": 0.5420342060998047,
-      "worst_curvature_mm": 0.5424083101963424,
-      "worst_at_easting": 714880.0,
-      "worst_at_longitude_deg": 28.095769475390256,
+      "row_northing": 4660000.0,
+      "lattice_step_m": 1000.0,
+      "typical_curvature_mm": 0.5420548709794017,
+      "worst_curvature_mm": 0.5424810791544525,
+      "worst_at_easting": 740000.0,
+      "worst_at_longitude_deg": 28.399099417390747,
       "is_discontinuity": false
     },
-    "roundtrip_max_mm": 2.3283064365386963e-06,
+    "roundtrip_max_mm": 2.109174492302518e-06,
+    "roundtrip_edge_failures": 0,
     "grid_path": "/mlsys/dev/bgs2005-to-bg1970-crs/output/bg_k5_tinshift.json",
-    "grid_size_mb": 3.01
+    "grid_size_mb": 5.39
   },
   {
     "zone": "k7",
     "quadrant": "northeast",
-    "n_vertices": 30401,
-    "n_triangles": 59976,
-    "build_step": "1km",
-    "test_step": "2km",
+    "n_vertices": 53912,
+    "n_triangles": 106798,
+    "build_source": "source_data_buff20km.zip/1km",
+    "test_sources": [
+      "source_data_buff20km.zip/2km"
+    ],
+    "provisional": false,
+    "provisional_reason": null,
     "out_of_sample": {
-      "n_total": 7599,
-      "n_covered": 7530,
-      "coverage_fraction": 0.9909198578760363,
-      "median_mm": 0.2395250356790306,
-      "p95_mm": 0.24162463288324734,
-      "rmse_mm": 0.2395175542186588,
-      "max_mm": 0.2421650415343595,
+      "n_total": 13478,
+      "n_covered": 13343,
+      "coverage_fraction": 0.9899836771034278,
+      "median_mm": 0.6071838246022878,
+      "p95_mm": 0.6145541814452157,
+      "rmse_mm": 0.6072425168991695,
+      "max_mm": 0.6161527776615446,
       "n_over_1mm": 0,
       "outlier_eastings": [],
-      "median_excluding_outliers_mm": 0.2395250356790306,
-      "rmse_excluding_outliers_mm": 0.2395175542186588
+      "median_excluding_outliers_mm": 0.6071838246022878,
+      "rmse_excluding_outliers_mm": 0.6072425168991695
     },
     "agkk_seam": {
-      "row_northing": 4821750.0,
-      "typical_curvature_mm": 2.4350422958549496,
-      "worst_curvature_mm": 2.4363671844335095,
-      "worst_at_easting": 752880.0,
-      "worst_at_longitude_deg": 28.62678406474276,
+      "row_northing": 4822000.0,
+      "lattice_step_m": 1000.0,
+      "typical_curvature_mm": 2.435133534622106,
+      "worst_curvature_mm": 2.436593945079319,
+      "worst_at_easting": 779000.0,
+      "worst_at_longitude_deg": 28.949534350841994,
       "is_discontinuity": false
     },
-    "roundtrip_max_mm": 2.616108983550713e-06,
+    "roundtrip_max_mm": 2.109174492302518e-06,
+    "roundtrip_edge_failures": 0,
     "grid_path": "/mlsys/dev/bgs2005-to-bg1970-crs/output/bg_k7_tinshift.json",
-    "grid_size_mb": 2.86
+    "grid_size_mb": 5.13
   },
   {
     "zone": "k9",
     "quadrant": "southwest",
-    "n_vertices": 37294,
-    "n_triangles": 73671,
-    "build_step": "1km",
-    "test_step": "2km",
+    "n_vertices": 62497,
+    "n_triangles": 123915,
+    "build_source": "source_data_buff20km.zip/1km",
+    "test_sources": [
+      "source_data_buff20km.zip/2km"
+    ],
+    "provisional": false,
+    "provisional_reason": null,
     "out_of_sample": {
-      "n_total": 9319,
-      "n_covered": 9219,
-      "coverage_fraction": 0.9892692348964481,
-      "median_mm": 0.10445117574700424,
-      "p95_mm": 0.1054978922016718,
-      "rmse_mm": 2.375607862249742,
-      "max_mm": 111.2745092664162,
-      "n_over_1mm": 40,
+      "n_total": 15620,
+      "n_covered": 15497,
+      "coverage_fraction": 0.9921254801536492,
+      "median_mm": 0.26167078033468183,
+      "p95_mm": 0.26555933352472366,
+      "rmse_mm": 6.445943452075578,
+      "max_mm": 182.2821515599716,
+      "n_over_1mm": 61,
       "outlier_eastings": [
-        374000.0,
-        376000.0
+        374500.0,
+        376500.0,
+        378500.0
       ],
-      "median_excluding_outliers_mm": 0.10444626065206222,
-      "rmse_excluding_outliers_mm": 0.10438815520537849
+      "median_excluding_outliers_mm": 0.2616552674685597,
+      "rmse_excluding_outliers_mm": 0.2615821302460766
     },
     "agkk_seam": {
-      "row_northing": 4674750.0,
-      "typical_curvature_mm": 0.9717514396817561,
-      "worst_curvature_mm": 127.00683801995267,
-      "worst_at_easting": 375880.0,
-      "worst_at_longitude_deg": 23.99708361987425,
+      "row_northing": 4675000.0,
+      "lattice_step_m": 1000.0,
+      "typical_curvature_mm": 0.9724493541489613,
+      "worst_curvature_mm": 127.12168235793162,
+      "worst_at_easting": 376000.0,
+      "worst_at_longitude_deg": 23.998482582748036,
       "is_discontinuity": true
     },
-    "roundtrip_max_mm": 2.134721821743558e-06,
+    "roundtrip_max_mm": 2.109174492302518e-06,
+    "roundtrip_edge_failures": 1,
     "grid_path": "/mlsys/dev/bgs2005-to-bg1970-crs/output/bg_k9_tinshift.json",
-    "grid_size_mb": 3.53
+    "grid_size_mb": 5.96
   }
 ]

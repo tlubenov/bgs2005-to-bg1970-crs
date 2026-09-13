@@ -15,7 +15,7 @@ DERIVEDPROJCRS["BG 1970 K3 (fitted, unofficial)",
    CS[Cartesian,2],AXIS["easting",east,ORDER[1],LENGTHUNIT["metre",1]],AXIS["northing",north,ORDER[2],LENGTHUNIT["metre",1]],
    ID["EPSG",7801]],
  DERIVINGCONVERSION["CCS2005 -> KS1970 K3, fitted pipeline",
-   METHOD["PROJ-based operation method: +proj=pipeline +step +inv +proj=lcc +lat_0=42.6678756833333 +lat_1=42 +lat_2=43.3333333333333 +lon_0=25.5 +x_0=500000 +y_0=4725824.3591 +ellps=GRS80 +step +proj=lcc +lat_0=42.6678756833 +lat_1=43.4484797323 +lat_2=43.4484797323 +lon_0=25.5000000000 +x_0=0 +y_0=0 +ellps=GRS80 +step +proj=affine +xoff=8685630.925364 +yoff=4639449.595387 +s11=0.999611084010 +s12=-0.027653772571 +s21=0.027653772571 +s22=0.999611084010"]],
+   METHOD["PROJ-based operation method: +proj=pipeline +step +inv +proj=lcc +lat_0=42.6678756833333 +lat_1=42 +lat_2=43.3333333333333 +lon_0=25.5 +x_0=500000 +y_0=4725824.3591 +ellps=GRS80 +step +proj=lcc +lat_0=42.6678756833 +lat_1=43.4501454971 +lat_2=43.4501454971 +lon_0=25.5000000000 +x_0=0 +y_0=0 +ellps=GRS80 +step +proj=affine +xoff=8685630.949773 +yoff=4639449.594637 +s11=0.999610993202 +s12=-0.027654191815 +s21=0.027654191815 +s22=0.999610993202"]],
  CS[Cartesian,2],
  AXIS["easting",east,ORDER[1],LENGTHUNIT["metre",1]],
  AXIS["northing",north,ORDER[2],LENGTHUNIT["metre",1]]]
